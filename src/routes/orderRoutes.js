@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../database');
 const authMiddleware = require('../middleware/authMiddleware');
 const { queryTradeInfo, verifyCheckMacValue, ECPAY_CONFIG } = require('../utils/ecpay');
+const { calculateShippingFee } = require('../utils/shipping');
 
 const router = express.Router();
 
@@ -29,7 +30,7 @@ function generateOrderNo() {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [recipientName, recipientEmail, recipientAddress]
+ *             required: [recipientName, recipientEmail, recipientAddress, deliveryMethod]
  *             properties:
  *               recipientName:
  *                 type: string
@@ -38,6 +39,13 @@ function generateOrderNo() {
  *                 format: email
  *               recipientAddress:
  *                 type: string
+ *               deliveryMethod:
+ *                 type: string
+ *                 enum: [home, cvs]
+ *                 description: 配送方式，home 為宅配、cvs 為超商取貨
+ *               isRush:
+ *                 type: boolean
+ *                 description: 是否為當日急件（選填，預設 false）
  *     responses:
  *       201:
  *         description: 訂單建立成功
@@ -55,6 +63,14 @@ function generateOrderNo() {
  *                       type: string
  *                     total_amount:
  *                       type: integer
+ *                     shipping_fee:
+ *                       type: integer
+ *                     delivery_method:
+ *                       type: string
+ *                     is_rush:
+ *                       type: boolean
+ *                     is_remote:
+ *                       type: boolean
  *                     status:
  *                       type: string
  *                     items:
@@ -79,14 +95,14 @@ function generateOrderNo() {
  *         description: 購物車為空或庫存不足或收件資訊缺失
  */
 router.post('/', (req, res) => {
-  const { recipientName, recipientEmail, recipientAddress } = req.body;
+  const { recipientName, recipientEmail, recipientAddress, deliveryMethod, isRush } = req.body;
   const userId = req.user.userId;
 
-  if (!recipientName || !recipientEmail || !recipientAddress) {
+  if (!recipientName || !recipientEmail || !recipientAddress || !deliveryMethod) {
     return res.status(400).json({
       data: null,
       error: 'VALIDATION_ERROR',
-      message: '收件人姓名、Email 和地址為必填欄位'
+      message: '收件人姓名、Email、地址和配送方式為必填欄位'
     });
   }
 
@@ -96,6 +112,14 @@ router.post('/', (req, res) => {
       data: null,
       error: 'VALIDATION_ERROR',
       message: 'Email 格式不正確'
+    });
+  }
+
+  if (!['home', 'cvs'].includes(deliveryMethod)) {
+    return res.status(400).json({
+      data: null,
+      error: 'VALIDATION_ERROR',
+      message: 'deliveryMethod 必須為 home 或 cvs'
     });
   }
 
@@ -127,10 +151,19 @@ router.post('/', (req, res) => {
     });
   }
 
-  // Calculate total
-  const totalAmount = cartItems.reduce(
+  // Calculate subtotal and shipping fee
+  const subtotal = cartItems.reduce(
     (sum, item) => sum + item.product_price * item.quantity, 0
   );
+
+  const shipping = calculateShippingFee({
+    deliveryMethod,
+    subtotal,
+    address: recipientAddress,
+    isRush: !!isRush
+  });
+
+  const totalAmount = subtotal + shipping.totalFee;
 
   const orderId = uuidv4();
   const orderNo = generateOrderNo();
@@ -139,9 +172,12 @@ router.post('/', (req, res) => {
   // Transaction: create order, order items, deduct stock, clear cart
   const createOrder = db.transaction(() => {
     db.prepare(
-      `INSERT INTO orders (id, order_no, user_id, recipient_name, recipient_email, recipient_address, total_amount, merchant_trade_no)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(orderId, orderNo, userId, recipientName, recipientEmail, recipientAddress, totalAmount, merchantTradeNo);
+      `INSERT INTO orders (id, order_no, user_id, recipient_name, recipient_email, recipient_address, total_amount, merchant_trade_no, delivery_method, is_rush, is_remote, shipping_fee)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      orderId, orderNo, userId, recipientName, recipientEmail, recipientAddress, totalAmount, merchantTradeNo,
+      deliveryMethod, isRush ? 1 : 0, shipping.isRemote ? 1 : 0, shipping.totalFee
+    );
 
     const insertItem = db.prepare(
       `INSERT INTO order_items (id, order_id, product_id, product_name, product_price, quantity)
@@ -170,6 +206,10 @@ router.post('/', (req, res) => {
       id: order.id,
       order_no: order.order_no,
       total_amount: order.total_amount,
+      shipping_fee: order.shipping_fee,
+      delivery_method: order.delivery_method,
+      is_rush: !!order.is_rush,
+      is_remote: !!order.is_remote,
       status: order.status,
       items: orderItems,
       created_at: order.created_at

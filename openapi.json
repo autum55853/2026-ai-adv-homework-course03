@@ -1165,7 +1165,8 @@
                 "required": [
                   "recipientName",
                   "recipientEmail",
-                  "recipientAddress"
+                  "recipientAddress",
+                  "deliveryMethod"
                 ],
                 "properties": {
                   "recipientName": {
@@ -1177,6 +1178,18 @@
                   },
                   "recipientAddress": {
                     "type": "string"
+                  },
+                  "deliveryMethod": {
+                    "type": "string",
+                    "enum": [
+                      "home",
+                      "cvs"
+                    ],
+                    "description": "配送方式，home 為宅配、cvs 為超商取貨"
+                  },
+                  "isRush": {
+                    "type": "boolean",
+                    "description": "是否為當日急件（選填，預設 false）"
                   }
                 }
               }
@@ -1202,6 +1215,18 @@
                         },
                         "total_amount": {
                           "type": "integer"
+                        },
+                        "shipping_fee": {
+                          "type": "integer"
+                        },
+                        "delivery_method": {
+                          "type": "string"
+                        },
+                        "is_rush": {
+                          "type": "boolean"
+                        },
+                        "is_remote": {
+                          "type": "boolean"
                         },
                         "status": {
                           "type": "string"

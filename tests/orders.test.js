@@ -29,6 +29,7 @@ describe('Orders API', () => {
         recipientName: '測試收件人',
         recipientEmail: 'recipient@example.com',
         recipientAddress: '台北市測試路 123 號',
+        deliveryMethod: 'home',
       });
 
     expect(res.status).toBe(201);
@@ -42,11 +43,18 @@ describe('Orders API', () => {
     expect(res.body.data).toHaveProperty('items');
     expect(Array.isArray(res.body.data.items)).toBe(true);
 
+    expect(res.body.data).toHaveProperty('shipping_fee');
+    expect(res.body.data).toHaveProperty('delivery_method', 'home');
+    expect(res.body.data).toHaveProperty('is_rush', false);
+    const itemsSubtotal = res.body.data.items.reduce(
+      (sum, item) => sum + item.product_price * item.quantity, 0
+    );
+    expect(res.body.data.total_amount - res.body.data.shipping_fee).toBe(itemsSubtotal);
+
     orderId = res.body.data.id;
   });
 
-  it('should fail to create order with empty cart', async () => {
-    // The cart was already cleared by the previous order
+  it('should fail to create order without deliveryMethod', async () => {
     const res = await request(app)
       .post('/api/orders')
       .set('Authorization', `Bearer ${userToken}`)
@@ -58,7 +66,24 @@ describe('Orders API', () => {
 
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('data', null);
-    expect(res.body).toHaveProperty('error');
+    expect(res.body).toHaveProperty('error', 'VALIDATION_ERROR');
+  });
+
+  it('should fail to create order with empty cart', async () => {
+    // The cart was already cleared by the previous order
+    const res = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({
+        recipientName: '測試收件人',
+        recipientEmail: 'recipient@example.com',
+        recipientAddress: '台北市測試路 123 號',
+        deliveryMethod: 'home',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('data', null);
+    expect(res.body).toHaveProperty('error', 'CART_EMPTY');
   });
 
   it('should fail to create order without auth', async () => {
