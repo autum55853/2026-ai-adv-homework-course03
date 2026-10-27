@@ -8,7 +8,8 @@
     "dev:css": "npx @tailwindcss/cli -i public/css/input.css -o public/css/output.css --watch",
     "css:build": "npx @tailwindcss/cli -i public/css/input.css -o public/css/output.css --minify",
     "openapi": "node generate-openapi.js",
-    "test:unit": "vitest run"
+    "test:unit": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

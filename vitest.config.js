@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     fileParallelism: false,
+    exclude: ['tests/integration/**', 'node_modules/**'],
     sequence: {
       files: [
         'tests/auth.test.js',

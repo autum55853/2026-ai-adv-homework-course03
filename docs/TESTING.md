@@ -248,3 +248,15 @@ it('should work with session ID', async () => {
 - 不需要管理埠號衝突
 - 不會觸發 `server.js` 中的 `app.listen()`
 - `database.js` 在 `require('../app')` 時即初始化（建表 + 種子資料）
+
+## Integration Test
+
+```bash
+npm run test:integration   # vitest.integration.config.js
+```
+
+- 檔案：`tests/integration/{order-flow,payment-flow}.test.js`，輔助函式見 `tests/integration/helpers.js`
+- 資料庫：`DB_PATH=:memory:`（設於 `vitest.integration.config.js` 的 `test.env`），**不會**碰 `database.sqlite`；`npm run test:unit` 已 exclude 此目錄
+- 資料：每個測試前 `resetData()` 清除；商品由測試自建（uuid id、庫存可控），不依賴 seed
+- 交易回滾：以測試內建 SQLite trigger 強制扣庫存失敗，驗證訂單/品項/庫存/購物車全數回復
+- 綠界：僅驗證導向表單與 CheckMacValue、模擬付款；`check-payment` 會連線綠界故不納入；後端目前無 `/ecpay/notify` 路由（`ReturnURL` 指向之），待補

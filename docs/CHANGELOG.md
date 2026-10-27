@@ -5,6 +5,8 @@
 ## [Unreleased]
 
 ### Added
+- Integration Test（`npm run test:integration`）：記憶體 SQLite（`DB_PATH=:memory:`），涵蓋購物車→訂單、運費、庫存扣除、購物車清空、失敗/交易回滾、綠界付款頁 CheckMacValue 與模擬付款
+- `src/database.js` 支援 `DB_PATH` 環境變數覆寫資料庫路徑
 - 綠界 ECPay AIO 金流串接：結帳後導向綠界付款頁面完成真實付款流程
 - 新增 `src/utils/ecpay.js` 工具模組：CheckMacValue 簽章產生/驗證、ECPay 專用 URL 編碼、QueryTradeInfo API 查詢
 - 新增 `GET /ecpay/payment/:orderId` 頁面路由：產生自動送出的 ECPay 付款表單
