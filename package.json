@@ -10,7 +10,8 @@
     "openapi": "node generate-openapi.js",
     "test:unit": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.js",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "postman": "npm run openapi && node scripts/openapi-to-postman.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

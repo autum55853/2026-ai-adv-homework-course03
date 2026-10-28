@@ -12,6 +12,7 @@ npm run css:build      # 編譯並壓縮 CSS
 npm run test:unit      # 單元/API 測試（vitest run，循序執行，共用 database.sqlite）
 npm run test:integration  # Integration Test（記憶體 SQLite，不碰 database.sqlite）
 npm run openapi        # 從 JSDoc 生成 openapi.json
+npm run postman        # 重生 openapi.json，並轉為 postman_collection.json
 ```
 
 ## 關鍵規則
