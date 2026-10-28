@@ -1,0 +1,53 @@
+name: Test
+
+on:
+  push:
+    branches: [main, AI]
+  pull_request:
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit Test
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      JWT_SECRET: ci-unit-test-jwt-secret
+      BASE_URL: http://localhost:3001
+      ADMIN_EMAIL: admin@hexschool.com
+      ADMIN_PASSWORD: '12345678'
+      FRONTEND_URL: http://localhost:5173
+      ECPAY_MERCHANT_ID: ${{ secrets.ECPAY_MERCHANT_ID }}
+      ECPAY_HASH_KEY: ${{ secrets.ECPAY_HASH_KEY }}
+      ECPAY_HASH_IV: ${{ secrets.ECPAY_HASH_IV }}
+      ECPAY_ENV: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package.json
+      # package-lock.json 被 .gitignore 排除，故用 npm install
+      - run: npm install
+      - run: npm run test:unit
+
+  integration:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package.json
+      - run: npm install
+      # 環境變數由 vitest.integration.config.js 注入，DB 為 :memory:
+      - run: npm run test:integration
