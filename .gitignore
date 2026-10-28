@@ -39,3 +39,10 @@ coverage/
 .claude/*.local.json
 public/css/output.css
 qa.md
+
+# Playwright / E2E 產物
+test-results/
+playwright-report/
+playwright/.cache/
+blob-report/
+tests/e2e/screenshots/
